@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rekod Kesihatan Pokok Durian</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .form-section {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-size: 0.95em;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .photo-upload {
+            grid-column: 1 / -1;
+        }
+
+        .photo-preview {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .photo-preview img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #dee2e6;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .table-section {
+            padding: 30px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.95em;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        tbody tr {
+            transition: background 0.3s;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-sihat {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-sakit {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-sederhana {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .photo-cell {
+            display: flex;
+            gap: 5px;
+        }
+
+        .photo-cell img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 2px solid #dee2e6;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.85em;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-edit {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-small:hover {
+            transform: scale(1.05);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 10px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h3 {
+            font-size: 2em;
+            margin-bottom: 5px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-card p {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 0.85em;
+            }
+
+            th, td {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌳 Rekod Kesihatan Pokok Durian</h1>
+            <p>Sistem Pemantauan Penyakit & Serangan Perosak</p>
+        </div>
+
+        <div class="form-section">
+            <div class="stats">
+                <div class="stat-card">
+                    <h3 id="totalRecords">0</h3>
+                    <p>Jumlah Rekod</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="healthyTrees">0</h3>
+                    <p>Pokok Sihat</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="sickTrees">0</h3>
+                    <p>Pokok Sakit</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="moderateTrees">0</h3>
+                    <p>Sederhana</p>
+                </div>
+            </div>
+
+            <form id="healthForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="tarikh">Tarikh Pemeriksaan *</label>
+                        <input type="date" id="tarikh" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="idPokok">ID Pokok *</label>
+                        <input type="text" id="idPokok" placeholder="Contoh: DUR-001" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="jenisDurian">Jenis Durian *</label>
+                        <input type="text" id="jenisDurian" placeholder="Contoh: Musang King" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lokasi">Lokasi *</label>
+                        <input type="text" id="lokasi" placeholder="Contoh: Blok A, Baris 3" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="statusKesihatan">Status Kesihatan *</label>
+                        <select id="statusKesihatan" required>
+                            <option value="">Pilih status</option>
+                            <option value="Sihat">Sihat</option>
+                            <option value="Sederhana">Sederhana</option>
+                            <option value="Sakit">Sakit</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="jenisPenyakit">Jenis Penyakit/Serangan</label>
+                        <select id="jenisPenyakit">
+                            <option value="">Tiada</option>
+                            <option value="Phytophthora (Busuk akar)">Phytophthora (Busuk akar)</option>
+                            <option value="Stem Canker">Stem Canker</option>
+                            <option value="Patch Canker">Patch Canker</option>
+                            <option value="Serangan Penggerek Batang">Serangan Penggerek Batang</option>
+                            <option value="Serangan Ulat">Serangan Ulat</option>
+                            <option value="Serangan Kumbang">Serangan Kumbang</option>
+                            <option value="Penyakit Daun">Penyakit Daun</option>
+                            <option value="Lain-lain">Lain-lain</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tahapSerangan">Tahap Serangan</label>
+                        <select id="tahapSerangan">
+                            <option value="">Tiada</option>
+                            <option value="Ringan">Ringan (< 25%)</option>
+                            <option value="Sederhana">Sederhana (25-50%)</option>
+                            <option value="Teruk">Teruk (> 50%)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="rawatan">Rawatan/Tindakan Diambil</label>
+                        <input type="text" id="rawatan" placeholder="Contoh: Sembur fungisida, buang bahagian terjejas">
+                    </div>
+
+                    <div class="form-group photo-upload">
+                        <label for="photos">Gambar Pokok 📷</label>
+                        <input type="file" id="photos" accept="image/*" multiple>
+                        <div class="photo-preview" id="photoPreview"></div>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="catatan">Catatan Tambahan</label>
+                        <textarea id="catatan" placeholder="Catatan terperinci tentang keadaan pokok, simptom yang diperhatikan, dll..."></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">💾 Simpan Rekod</button>
+            </form>
+        </div>
+
+        <div class="table-section">
+            <h2 style="margin-bottom: 20px; color: #2c3e50;">📋 Senarai Rekod Kesihatan</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tarikh</th>
+                        <th>ID Pokok</th>
+                        <th>Jenis</th>
+                        <th>Lokasi</th>
+                        <th>Status</th>
+                        <th>Penyakit/Serangan</th>
+                        <th>Tahap</th>
+                        <th>Rawatan</th>
+                        <th>Gambar</th>
+                        <th>Catatan</th>
+                        <th>Tindakan</th>
+                    </tr>
+                </thead>
+                <tbody id="recordsTable">
+                    <tr>
+                        <td colspan="11" style="text-align: center; color: #6c757d; padding: 40px;">
+                            Tiada rekod lagi. Tambah rekod pertama anda di atas.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal" id="imageModal" onclick="this.style.display='none'">
+        <img id="modalImage" src="" alt="Preview">
+    </div>
+
+    <script>
+        // Sample data untuk demo
+        const sampleData = [
+            {
+                tarikh: '2025-10-15',
+                idPokok: 'DUR-001',
+                jenisDurian: 'Musang King',
+                lokasi: 'Blok A, Baris 1',
+                statusKesihatan: 'Sihat',
+                jenisPenyakit: '',
+                tahapSerangan: '',
+                rawatan: '',
+                photos: [],
+                catatan: 'Pokok dalam keadaan baik, pertumbuhan normal',
+                timestamp: new Date('2025-10-15').toISOString()
+            },
+            {
+                tarikh: '2025-10-14',
+                idPokok: 'DUR-003',
+                jenisDurian: 'D24',
+                lokasi: 'Blok A, Baris 2',
+                statusKesihatan: 'Sederhana',
+                jenisPenyakit: 'Penyakit Daun',
+                tahapSerangan: 'Ringan',
+                rawatan: 'Sembur fungisida organik',
+                photos: [],
+                catatan: 'Terdapat bintik-bintik kuning pada daun, sudah disembur',
+                timestamp: new Date('2025-10-14').toISOString()
+            },
+            {
+                tarikh: '2025-10-12',
+                idPokok: 'DUR-007',
+                jenisDurian: 'Black Thorn',
+                lokasi: 'Blok B, Baris 1',
+                statusKesihatan: 'Sakit',
+                jenisPenyakit: 'Phytophthora (Busuk akar)',
+                tahapSerangan: 'Sederhana',
+                rawatan: 'Saliran tanah diperbaiki, aplikasi fungisida sistemik',
+                photos: [],
+                catatan: 'Daun menguning, batang bawah menunjukkan tanda-tanda reput. Perlu pemantauan rapi',
+                timestamp: new Date('2025-10-12').toISOString()
+            },
+            {
+                tarikh: '2025-10-10',
+                idPokok: 'DUR-012',
+                jenisDurian: 'Musang King',
+                lokasi: 'Blok B, Baris 3',
+                statusKesihatan: 'Sederhana',
+                jenisPenyakit: 'Serangan Penggerek Batang',
+                tahapSerangan: 'Ringan',
+                rawatan: 'Suntikan insektisida pada lubang gerek',
+                photos: [],
+                catatan: 'Dijumpai 2 lubang gerek pada batang, telah dirawat',
+                timestamp: new Date('2025-10-10').toISOString()
+            },
+            {
+                tarikh: '2025-10-08',
+                idPokok: 'DUR-015',
+                jenisDurian: 'D197',
+                lokasi: 'Blok C, Baris 1',
+                statusKesihatan: 'Sihat',
+                jenisPenyakit: '',
+                tahapSerangan: '',
+                rawatan: '',
+                photos: [],
+                catatan: 'Pemeriksaan rutin, tiada masalah dijumpai',
+                timestamp: new Date('2025-10-08').toISOString()
+            }
+        ];
+
+        // Load data from localStorage or use sample data
+        let records = JSON.parse(localStorage.getItem('healthRecords')) || sampleData;
+
+        // Save sample data to localStorage if empty
+        if (!localStorage.getItem('healthRecords')) {
+            localStorage.setItem('healthRecords', JSON.stringify(sampleData));
+        }
+
+        let editingIndex = -1;
+
+        // Set default date to today
+        document.getElementById('tarikh').valueAsDate = new Date();
+
+        // Photo preview
+        document.getElementById('photos').addEventListener('change', function(e) {
+            const preview = document.getElementById('photoPreview');
+            preview.innerHTML = '';
+
+            Array.from(e.target.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    preview.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
+        // Form submission
+        document.getElementById('healthForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const photos = [];
+            const fileInput = document.getElementById('photos');
+
+            // Convert photos to base64
+            const processPhotos = () => {
+                return new Promise((resolve) => {
+                    if (fileInput.files.length === 0) {
+                        resolve([]);
+                        return;
+                    }
+
+                    let processed = 0;
+                    Array.from(fileInput.files).forEach(file => {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            photos.push(e.target.result);
+                            processed++;
+                            if (processed === fileInput.files.length) {
+                                resolve(photos);
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                });
+            };
+
+            processPhotos().then(photoData => {
+                const record = {
+                    tarikh: document.getElementById('tarikh').value,
+                    idPokok: document.getElementById('idPokok').value,
+                    jenisDurian: document.getElementById('jenisDurian').value,
+                    lokasi: document.getElementById('lokasi').value,
+                    statusKesihatan: document.getElementById('statusKesihatan').value,
+                    jenisPenyakit: document.getElementById('jenisPenyakit').value,
+                    tahapSerangan: document.getElementById('tahapSerangan').value,
+                    rawatan: document.getElementById('rawatan').value,
+                    photos: photoData,
+                    catatan: document.getElementById('catatan').value,
+                    timestamp: new Date().toISOString()
+                };
+
+                if (editingIndex >= 0) {
+                    records[editingIndex] = record;
+                    editingIndex = -1;
+                } else {
+                    records.unshift(record);
+                }
+
+                localStorage.setItem('healthRecords', JSON.stringify(records));
+                displayRecords();
+                this.reset();
+                document.getElementById('photoPreview').innerHTML = '';
+                document.getElementById('tarikh').valueAsDate = new Date();
+
+                alert(editingIndex >= 0 ? 'Rekod berjaya dikemaskini!' : 'Rekod berjaya disimpan!');
+            });
+        });
+
+        function displayRecords() {
+            const tbody = document.getElementById('recordsTable');
+
+            if (records.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="11" style="text-align: center; color: #6c757d; padding: 40px;">
+                            Tiada rekod lagi. Tambah rekod pertama anda di atas.
+                        </td>
+                    </tr>
+                `;
+                updateStats();
+                return;
+            }
+
+            tbody.innerHTML = records.map((record, index) => `
+                <tr>
+                    <td>${new Date(record.tarikh).toLocaleDateString('ms-MY')}</td>
+                    <td><strong>${record.idPokok}</strong></td>
+                    <td>${record.jenisDurian}</td>
+                    <td>${record.lokasi}</td>
+                    <td>
+                        <span class="status-badge status-${record.statusKesihatan.toLowerCase()}">
+                            ${record.statusKesihatan}
+                        </span>
+                    </td>
+                    <td>${record.jenisPenyakit || '-'}</td>
+                    <td>${record.tahapSerangan || '-'}</td>
+                    <td>${record.rawatan || '-'}</td>
+                    <td>
+                        <div class="photo-cell">
+                            ${record.photos.map(photo => `
+                                <img src="${photo}" alt="Foto" onclick="showImage('${photo}')">
+                            `).join('')}
+                            ${record.photos.length === 0 ? '-' : ''}
+                        </div>
+                    </td>
+                    <td>${record.catatan || '-'}</td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn-small btn-edit" onclick="editRecord(${index})">Edit</button>
+                            <button class="btn-small btn-delete" onclick="deleteRecord(${index})">Padam</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById('totalRecords').textContent = records.length;
+            document.getElementById('healthyTrees').textContent = records.filter(r => r.statusKesihatan === 'Sihat').length;
+            document.getElementById('sickTrees').textContent = records.filter(r => r.statusKesihatan === 'Sakit').length;
+            document.getElementById('moderateTrees').textContent = records.filter(r => r.statusKesihatan === 'Sederhana').length;
+        }
+
+        function showImage(src) {
+            document.getElementById('modalImage').src = src;
+            document.getElementById('imageModal').style.display = 'flex';
+        }
+
+        function editRecord(index) {
+            const record = records[index];
+            document.getElementById('tarikh').value = record.tarikh;
+            document.getElementById('idPokok').value = record.idPokok;
+            document.getElementById('jenisDurian').value = record.jenisDurian;
+            document.getElementById('lokasi').value = record.lokasi;
+            document.getElementById('statusKesihatan').value = record.statusKesihatan;
+            document.getElementById('jenisPenyakit').value = record.jenisPenyakit;
+            document.getElementById('tahapSerangan').value = record.tahapSerangan;
+            document.getElementById('rawatan').value = record.rawatan;
+            document.getElementById('catatan').value = record.catatan;
+
+            editingIndex = index;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function deleteRecord(index) {
+            if (confirm('Adakah anda pasti mahu memadam rekod ini?')) {
+                records.splice(index, 1);
+                localStorage.setItem('healthRecords', JSON.stringify(records));
+                displayRecords();
+            }
+        }
+
+        // Initial display
+        displayRecords();
+    </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest:*)",
+      "Bash(npm install)",
+      "Bash(npm run dev)",
+      "Bash(timeout:*)",
+      "Read(//c/Users/PC CUSTOM/Downloads/**)",
+      "Bash(npm install qrcode.react)",
+      "Bash(copy:*)",
+      "Bash(npm install:*)",
+      "Bash(dir:*)",
+      "Bash(powershell:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(find:*)",
+      "Bash(git init)",
+      "Bash(git add .)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
