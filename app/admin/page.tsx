@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Edit, Save, X, Plus, Trash2, ArrowLeft, LogOut, QrCode, Camera, Image as ImageIcon } from "lucide-react";
+import { Edit, Save, X, Plus, Trash2, ArrowLeft, LogOut, QrCode, Camera, MapPin, Image as ImageIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { treesData as initialTreesData, farmActivities as initialActivities } from "@/data/trees";
 import { TreeInfo, FarmActivity, TreeHealthRecord } from "@/types/tree";
@@ -12,6 +12,7 @@ import { QRCodeSVG } from "qrcode.react";
 import {
   getAllTrees,
   updateTree as updateTreeInFirebase,
+  createTree as createTreeInFirebase,
   initializeTreesInFirebase,
   getAllHealthRecords,
   createHealthRecord,
@@ -56,6 +57,26 @@ export default function AdminDashboard() {
   const [editForm, setEditForm] = useState<TreeInfo | null>(null);
   const [activeTab, setActiveTab] = useState<"trees" | "table" | "activities" | "qrcodes" | "health" | "harvest" | "profits" | "analytics" | "dashboard-analytics" | "inventory" | "tasks" | "weather" | "alerts" | "reports" | "activitylog" | "backup" | "users" | "products" | "orders">("trees");
   const [showingQR, setShowingQR] = useState<string | null>(null);
+
+  // Add Tree State
+  const [showAddTreeModal, setShowAddTreeModal] = useState(false);
+  const [addTreeForm, setAddTreeForm] = useState({
+    no: "",
+    variety: "",
+    location: "",
+    zone: "",
+    row: "",
+    plantedDate: new Date().toISOString().split('T')[0],
+    treeAge: "0",
+    height: "",
+    health: "Excellent",
+    healthStatus: "Healthy",
+    estimatedYield: "0",
+    lastHarvest: "",
+    notes: "",
+    photos: [] as string[],
+    gpsLocation: { latitude: 0, longitude: 0, accuracy: 0 }
+  });
 
   // Health Records State
   const [healthRecords, setHealthRecords] = useState<TreeHealthRecord[]>([]);
@@ -294,6 +315,136 @@ export default function AdminDashboard() {
     };
   };
 
+  // Add Tree Functions
+  const resetAddTreeForm = () => {
+    setAddTreeForm({
+      no: "",
+      variety: "",
+      location: "",
+      zone: "",
+      row: "",
+      plantedDate: new Date().toISOString().split('T')[0],
+      treeAge: "0",
+      height: "",
+      health: "Excellent",
+      healthStatus: "Healthy",
+      estimatedYield: "0",
+      lastHarvest: "",
+      notes: "",
+      photos: [],
+      gpsLocation: { latitude: 0, longitude: 0, accuracy: 0 }
+    });
+  };
+
+  const handleAddTreePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const readFiles = Array.from(files).map(file => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          resolve(event.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(readFiles).then(newPhotos => {
+      setAddTreeForm(prev => ({
+        ...prev,
+        photos: [...prev.photos, ...newPhotos]
+      }));
+    });
+  };
+
+  const removeAddTreePhoto = (index: number) => {
+    setAddTreeForm(prev => ({
+      ...prev,
+      photos: prev.photos.filter((_, i) => i !== index)
+    }));
+  };
+
+  const captureGPSLocation = () => {
+    if (!navigator.geolocation) {
+      showError("GPS not supported by this browser");
+      return;
+    }
+
+    showSuccess("Getting GPS location...");
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setAddTreeForm(prev => ({
+          ...prev,
+          gpsLocation: {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy
+          }
+        }));
+        showSuccess(`GPS captured! Lat: ${position.coords.latitude.toFixed(6)}, Lon: ${position.coords.longitude.toFixed(6)}`);
+      },
+      (error) => {
+        showError(`GPS Error: ${error.message}`);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  };
+
+  const handleSaveNewTree = async () => {
+    if (!addTreeForm.no || !addTreeForm.variety || !addTreeForm.location) {
+      showWarning("Please fill in required fields: Tree No, Variety, and Location");
+      return;
+    }
+
+    const newTree: TreeInfo = {
+      id: `tree-${Date.now()}`,
+      bil: trees.length + 1,
+      no: addTreeForm.no,
+      variety: addTreeForm.variety,
+      location: addTreeForm.location,
+      zone: addTreeForm.zone,
+      row: addTreeForm.row,
+      plantedDate: addTreeForm.plantedDate,
+      treeAge: addTreeForm.treeAge,
+      height: addTreeForm.height,
+      health: addTreeForm.health,
+      healthStatus: addTreeForm.healthStatus,
+      estimatedYield: addTreeForm.estimatedYield,
+      lastHarvest: addTreeForm.lastHarvest || "",
+      lastFertilized: "",
+      fertilizerType: "",
+      nextExpectedHarvest: "",
+      yield: addTreeForm.estimatedYield,
+      notes: addTreeForm.notes,
+      photos: addTreeForm.photos,
+      gpsLocation: addTreeForm.gpsLocation,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      const success = await createTreeInFirebase(newTree);
+
+      if (success) {
+        await loadTreesFromFirebase();
+        resetAddTreeForm();
+        setShowAddTreeModal(false);
+        showSuccess(`Tree ${newTree.no} added successfully! 🌳`);
+      } else {
+        showError("Error adding tree. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      showError("Error adding tree. Please check your Firebase configuration.");
+    }
+  };
+
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -433,6 +584,20 @@ export default function AdminDashboard() {
         <div className="p-4 sm:p-6 lg:px-8">
         {activeTab === "trees" && (
           <div className="space-y-6">
+            {/* Add Tree Button */}
+            <div className="flex justify-end">
+              <button
+                onClick={() => {
+                  resetAddTreeForm();
+                  setShowAddTreeModal(true);
+                }}
+                className="flex items-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors shadow-lg"
+              >
+                <Plus size={20} />
+                <span>Add Tree</span>
+              </button>
+            </div>
+
             {loadingTrees ? (
               <>
                 <SkeletonTreeCard />
@@ -1211,6 +1376,293 @@ export default function AdminDashboard() {
               className="w-full h-auto max-h-[90vh] object-contain rounded-lg"
               onClick={(e) => e.stopPropagation()}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Add Tree Modal */}
+      {showAddTreeModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full my-8">
+            <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6 rounded-t-xl">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">🌳 Add New Tree</h2>
+                <button
+                  onClick={() => {
+                    setShowAddTreeModal(false);
+                    resetAddTreeForm();
+                  }}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              <div className="space-y-4">
+                {/* Basic Info */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Tree No * <span className="text-xs text-gray-500">(e.g., P001, P002)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={addTreeForm.no}
+                      onChange={(e) => setAddTreeForm({ ...addTreeForm, no: e.target.value })}
+                      placeholder="P001"
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Variety * <span className="text-xs text-gray-500">(Jenis durian)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={addTreeForm.variety}
+                      onChange={(e) => setAddTreeForm({ ...addTreeForm, variety: e.target.value })}
+                      placeholder="Musang King, D24, Black Thorn..."
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Location * <span className="text-xs text-gray-500">(Lokasi dalam kebun)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={addTreeForm.location}
+                    onChange={(e) => setAddTreeForm({ ...addTreeForm, location: e.target.value })}
+                    placeholder="Blok A, Baris 1, Pokok 1"
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
+                    required
+                  />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Zone <span className="text-xs text-gray-500">(Zon kebun)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={addTreeForm.zone}
+                      onChange={(e) => setAddTreeForm({ ...addTreeForm, zone: e.target.value })}
+                      placeholder="A, B, C..."
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Row <span className="text-xs text-gray-500">(Nombor baris)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={addTreeForm.row}
+                      onChange={(e) => setAddTreeForm({ ...addTreeForm, row: e.target.value })}
+                      placeholder="1, 2, 3..."
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Planting Info */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Planted Date <span className="text-xs text-gray-500">(Tarikh tanam)</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={addTreeForm.plantedDate}
+                      onChange={(e) => setAddTreeForm({ ...addTreeForm, plantedDate: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Age (years) <span className="text-xs text-gray-500">(Umur pokok)</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={addTreeForm.treeAge}
+                      onChange={(e) => setAddTreeForm({ ...addTreeForm, treeAge: e.target.value })}
+                      placeholder="0"
+                      min="0"
+                      step="0.1"
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Height (meters) <span className="text-xs text-gray-500">(Tinggi pokok)</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={addTreeForm.height}
+                      onChange={(e) => setAddTreeForm({ ...addTreeForm, height: e.target.value })}
+                      placeholder="0.5"
+                      min="0"
+                      step="0.1"
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Health Status
+                    </label>
+                    <select
+                      value={addTreeForm.health}
+                      onChange={(e) => setAddTreeForm({ ...addTreeForm, health: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
+                    >
+                      <option value="Excellent">Excellent (Sihat)</option>
+                      <option value="Good">Good (Baik)</option>
+                      <option value="Fair">Fair (Sederhana)</option>
+                      <option value="Needs Attention">Needs Attention (Perlu Perhatian)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Yield Info */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Estimated Yield (kg) <span className="text-xs text-gray-500">(Anggaran hasil)</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={addTreeForm.estimatedYield}
+                      onChange={(e) => setAddTreeForm({ ...addTreeForm, estimatedYield: e.target.value })}
+                      placeholder="0"
+                      min="0"
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Last Harvest Date <span className="text-xs text-gray-500">(Optional)</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={addTreeForm.lastHarvest}
+                      onChange={(e) => setAddTreeForm({ ...addTreeForm, lastHarvest: e.target.value })}
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Notes <span className="text-xs text-gray-500">(Catatan tambahan)</span>
+                  </label>
+                  <textarea
+                    value={addTreeForm.notes}
+                    onChange={(e) => setAddTreeForm({ ...addTreeForm, notes: e.target.value })}
+                    rows={3}
+                    placeholder="Anak pokok umur 6 bulan dari nursery XYZ. Siram 2 liter sehari..."
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none resize-none"
+                  />
+                </div>
+
+                {/* Photo Upload */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    📷 Upload Photos <span className="text-xs text-gray-500">(Max 5 photos)</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleAddTreePhotoUpload}
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Upload gambar pokok untuk rekod</p>
+
+                  {/* Photo Preview */}
+                  {addTreeForm.photos.length > 0 && (
+                    <div className="mt-4 grid grid-cols-3 gap-3">
+                      {addTreeForm.photos.map((photo, idx) => (
+                        <div key={idx} className="relative group">
+                          <img
+                            src={photo}
+                            alt={`Preview ${idx + 1}`}
+                            className="w-full h-24 object-cover rounded-lg border-2 border-gray-200"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeAddTreePhoto(idx)}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* GPS Location */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    📍 GPS Location <span className="text-xs text-gray-500">(Optional)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={captureGPSLocation}
+                    className="w-full px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border-2 border-blue-200 rounded-lg transition-colors font-semibold"
+                  >
+                    Capture Current GPS Location
+                  </button>
+                  {addTreeForm.gpsLocation.latitude !== 0 && (
+                    <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
+                      <p className="font-semibold text-green-800">✅ GPS Captured!</p>
+                      <p className="text-green-700">
+                        Lat: {addTreeForm.gpsLocation.latitude.toFixed(6)},
+                        Lon: {addTreeForm.gpsLocation.longitude.toFixed(6)}
+                      </p>
+                      <p className="text-green-600 text-xs">
+                        Accuracy: ±{addTreeForm.gpsLocation.accuracy.toFixed(1)}m
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 bg-gray-50 rounded-b-xl flex justify-end space-x-4">
+              <button
+                onClick={() => {
+                  setShowAddTreeModal(false);
+                  resetAddTreeForm();
+                }}
+                className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveNewTree}
+                className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-colors"
+              >
+                <Save size={20} />
+                <span>Save Tree</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
