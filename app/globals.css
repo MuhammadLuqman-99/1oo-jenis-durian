@@ -34,4 +34,185 @@
   .text-shadow-lg {
     text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.2);
   }
+
+  /* Accessibility utilities */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  .not-sr-only {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+
+  /* Focus visible styles */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  }
+
+  .focus-ring-green {
+    @apply focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2;
+  }
+
+  /* Skip link */
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-blue-600 focus:text-white focus:rounded-lg focus:m-2;
+  }
+
+  /* Mobile-specific utilities */
+  .touch-target {
+    @apply min-w-[44px] min-h-[44px];
+  }
+
+  .touch-target-lg {
+    @apply min-w-[48px] min-h-[48px];
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Scroll snap for mobile carousels */
+  .scroll-snap-x {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .scroll-snap-child {
+    scroll-snap-align: start;
+  }
+
+  /* Hide scrollbars on mobile */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Mobile touch feedback */
+  .active-scale {
+    @apply active:scale-95 transition-transform;
+  }
+
+  /* Mobile horizontal scroll container */
+  .mobile-scroll {
+    @apply overflow-x-auto scrollbar-hide;
+  }
+
+  /* Mobile-friendly spacing */
+  .mobile-container {
+    @apply px-4 md:px-6 lg:px-8;
+  }
+
+  .mobile-section {
+    @apply py-6 md:py-8 lg:py-12;
+  }
+
+  /* Smooth transitions */
+  .transition-smooth {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  .transition-fast {
+    @apply transition-all duration-150 ease-in-out;
+  }
+
+  .transition-slow {
+    @apply transition-all duration-500 ease-in-out;
+  }
+
+  /* Button interaction states */
+  .btn-interactive {
+    @apply transition-all duration-200 active:scale-95 hover:shadow-lg;
+  }
+
+  /* Card hover effects */
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-2xl hover:-translate-y-1;
+  }
+
+  /* Fade transitions */
+  .fade-enter {
+    @apply opacity-0;
+  }
+
+  .fade-enter-active {
+    @apply opacity-100 transition-opacity duration-300;
+  }
+
+  .fade-exit {
+    @apply opacity-100;
+  }
+
+  .fade-exit-active {
+    @apply opacity-0 transition-opacity duration-200;
+  }
+
+  /* Slide transitions */
+  .slide-up-enter {
+    @apply translate-y-4 opacity-0;
+  }
+
+  .slide-up-enter-active {
+    @apply translate-y-0 opacity-100 transition-all duration-300;
+  }
+
+  /* Scale transitions */
+  .scale-enter {
+    @apply scale-95 opacity-0;
+  }
+
+  .scale-enter-active {
+    @apply scale-100 opacity-100 transition-all duration-200;
+  }
+
+  /* Stagger animation for lists */
+  .stagger-item {
+    @apply opacity-0 translate-y-4;
+    animation: staggerIn 0.3s ease-out forwards;
+  }
+
+  @keyframes staggerIn {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  button, a {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

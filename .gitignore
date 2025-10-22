@@ -16,6 +16,7 @@
 # misc
 .DS_Store
 *.pem
+nul
 
 # debug
 npm-debug.log*
@@ -24,6 +25,7 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env
 
 # vercel
 .vercel
@@ -31,3 +33,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# claude settings (local only)
+.claude/settings.local.json
+
+# backup files
+*.backup
+
+# firebase (IMPORTANT: Keep your Firebase config private in production!)
+# Uncomment this line if you want to keep Firebase config secret:
+# lib/firebase.ts

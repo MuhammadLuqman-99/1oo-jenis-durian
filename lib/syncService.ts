@@ -193,8 +193,12 @@ export class SyncService {
   }
 
   // Add listener for sync status updates
-  addListener(callback: (status: SyncStatus) => void): void {
+  addListener(callback: (status: SyncStatus) => void): () => void {
     this.listeners.add(callback);
+    // Return unsubscribe function
+    return () => {
+      this.removeListener(callback);
+    };
   }
 
   // Remove listener

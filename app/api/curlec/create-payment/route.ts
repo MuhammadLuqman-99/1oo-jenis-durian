@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createPaymentTransaction } from "@/lib/orderService";
 
 export async function POST(request: NextRequest) {
   try {
-    const orderData = await request.json();
+    const { orderId, orderData } = await request.json();
 
     // Curlec API credentials (get from Curlec dashboard)
     const CURLEC_API_KEY = process.env.CURLEC_API_KEY || "";
@@ -16,30 +17,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create payment transaction record
+    const transactionId = await createPaymentTransaction(
+      orderId,
+      orderData.customerId || 'guest',
+      orderData.total,
+      'curlec'
+    );
+
+    if (!transactionId) {
+      return NextResponse.json(
+        { success: false, error: "Failed to create payment transaction" },
+        { status: 500 }
+      );
+    }
+
     // Prepare Curlec payment payload
     const paymentPayload = {
       amount: Math.round(orderData.total * 100), // Convert to cents
       currency: "MYR",
-      description: `Durian Order - ${orderData.items.length} items`,
+      description: `${orderData.orderNumber} - ${orderData.items.length} items`,
       customer: {
         name: orderData.customer.name,
         email: orderData.customer.email,
         phone: orderData.customer.phone,
       },
       billing_address: {
-        line1: orderData.customer.address,
-        city: orderData.customer.city,
-        state: orderData.customer.state,
-        postcode: orderData.customer.postcode,
-        country: "MY",
+        line1: orderData.shippingAddress.addressLine1,
+        line2: orderData.shippingAddress.addressLine2 || "",
+        city: orderData.shippingAddress.city,
+        state: orderData.shippingAddress.state,
+        postcode: orderData.shippingAddress.postcode,
+        country: orderData.shippingAddress.country || "MY",
       },
       metadata: {
-        order_id: `ORDER-${Date.now()}`,
-        items: JSON.stringify(orderData.items),
-        timestamp: orderData.timestamp,
+        order_id: orderId,
+        order_number: orderData.orderNumber,
+        transaction_id: transactionId,
+        customer_id: orderData.customerId || 'guest',
+        items_count: orderData.items.length,
       },
-      redirect_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3004"}/payment/success`,
-      callback_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3004"}/api/curlec/webhook`,
+      redirect_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3002"}/shop/order/${orderId}/success`,
+      callback_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3002"}/api/curlec/webhook`,
     };
 
     // Create Basic Auth header
@@ -65,11 +84,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Update payment transaction with Curlec data
+    await import('@/lib/orderService').then(m =>
+      m.updatePaymentTransaction(transactionId, {
+        curlecPaymentId: curlecData.id,
+        curlecBillUrl: curlecData.next_action?.redirect_to_url?.url,
+        status: 'processing',
+        responseData: curlecData,
+      })
+    );
+
     // Return the payment URL to redirect user
     return NextResponse.json({
       success: true,
       paymentUrl: curlecData.next_action?.redirect_to_url?.url || curlecData.client_secret,
       paymentId: curlecData.id,
+      transactionId,
     });
 
   } catch (error: any) {

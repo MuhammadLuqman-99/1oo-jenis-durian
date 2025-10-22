@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Edit, Save, X, Plus, Trash2, ArrowLeft, LogOut, QrCode, Camera, Image as ImageIcon } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { treesData as initialTreesData, farmActivities as initialActivities } from "@/data/trees";
 import { TreeInfo, FarmActivity, TreeHealthRecord } from "@/types/tree";
 import Link from "next/link";
+import { showSuccess, showError, showWarning } from "@/lib/toast";
 import { QRCodeSVG } from "qrcode.react";
 import {
   getAllTrees,
@@ -24,16 +26,35 @@ import {
   isOnline,
 } from "@/lib/offlineStorage";
 import { SyncStatusIndicator } from "@/components/SyncStatusIndicator";
+import AdminSidebar from "@/components/AdminSidebar";
+import ReportsDashboard from "@/components/ReportsDashboard";
+import HarvestCalendar from "@/components/HarvestCalendar";
+import ProfitDashboard from "@/components/ProfitDashboard";
+import YieldAnalyticsDashboard from "@/components/YieldAnalyticsDashboard";
+import AnalyticsDashboard from "@/components/AnalyticsDashboard";
+import InventoryDashboard from "@/components/InventoryDashboard";
+import TaskSchedulerDashboard from "@/components/TaskSchedulerDashboard";
+import WeatherDashboard from "@/components/WeatherDashboard";
+import AlertsDashboard from "@/components/AlertsDashboard";
+import ActivityLogDashboard from "@/components/ActivityLogDashboard";
+import BackupManager from "@/components/BackupManager";
+import UserManagement from "@/components/UserManagement";
+import ProductManagement from "@/components/admin/ProductManagement";
+import OrderDashboard from "@/components/admin/OrderDashboard";
+import { SkeletonTreeCard, SkeletonHealthRecord } from "@/components/shared";
+import { transitions } from "@/lib/transitions";
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user, userProfile, logout, loading: authLoading, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [loadingTrees, setLoadingTrees] = useState(false);
+  const [loadingHealthRecords, setLoadingHealthRecords] = useState(false);
   const [trees, setTrees] = useState<TreeInfo[]>(initialTreesData);
   const [activities, setActivities] = useState<FarmActivity[]>(initialActivities);
   const [editingTree, setEditingTree] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<TreeInfo | null>(null);
-  const [activeTab, setActiveTab] = useState<"trees" | "table" | "activities" | "qrcodes" | "health">("trees");
+  const [activeTab, setActiveTab] = useState<"trees" | "table" | "activities" | "qrcodes" | "health" | "harvest" | "profits" | "analytics" | "dashboard-analytics" | "inventory" | "tasks" | "weather" | "alerts" | "reports" | "activitylog" | "backup" | "users" | "products" | "orders">("trees");
   const [showingQR, setShowingQR] = useState<string | null>(null);
 
   // Health Records State
@@ -59,21 +80,26 @@ export default function AdminDashboard() {
     inspectedBy: "",
   });
 
+  // Protect route - redirect to login if not authenticated
   useEffect(() => {
-    const loggedIn = localStorage.getItem("adminLoggedIn");
-    const adminUser = localStorage.getItem("adminUser");
-    if (loggedIn === "true") {
-      setIsAuthenticated(true);
-      setHealthFormData(prev => ({ ...prev, inspectedBy: adminUser || "" }));
-      loadTreesFromFirebase();
-      loadHealthRecords();
-    } else {
-      router.push("/admin/login");
+    if (!authLoading) {
+      if (!user) {
+        router.push("/admin/login");
+      } else {
+        // User is authenticated
+        setHealthFormData(prev => ({
+          ...prev,
+          inspectedBy: userProfile?.displayName || user.email || ""
+        }));
+        loadTreesFromFirebase();
+        loadHealthRecords();
+        setLoading(false);
+      }
     }
-    setLoading(false);
-  }, [router]);
+  }, [user, authLoading, router, userProfile]);
 
   const loadTreesFromFirebase = async () => {
+    setLoadingTrees(true);
     try {
       const firebaseTrees = await getAllTrees();
 
@@ -88,10 +114,13 @@ export default function AdminDashboard() {
       console.error("Error loading trees from Firebase:", error);
       // Fallback to local data if Firebase fails
       setTrees(initialTreesData);
+    } finally {
+      setLoadingTrees(false);
     }
   };
 
   const loadHealthRecords = async () => {
+    setLoadingHealthRecords(true);
     try {
       // Try offline storage first
       const offlineRecords = await getAllHealthRecordsOffline();
@@ -116,6 +145,8 @@ export default function AdminDashboard() {
       } catch (offlineError) {
         console.error("Error loading offline records:", offlineError);
       }
+    } finally {
+      setLoadingHealthRecords(false);
     }
   };
 
@@ -148,7 +179,7 @@ export default function AdminDashboard() {
 
   const handleSaveHealthRecord = async () => {
     if (!healthFormData.treeId || !healthFormData.healthStatus || !healthFormData.inspectionDate) {
-      alert("Please fill in required fields: Tree, Health Status, and Inspection Date");
+      showWarning("Please fill in required fields: Tree, Health Status, and Inspection Date");
       return;
     }
 
@@ -188,15 +219,15 @@ export default function AdminDashboard() {
         setEditingHealthRecord(null);
 
         // Show appropriate message based on network status
-        const message = editingHealthRecord ? "✅ Record updated" : "✅ Record added";
+        const message = editingHealthRecord ? "Record updated" : "Record added";
         const syncNote = isOnline() ? " and syncing..." : " (will sync when online)";
-        alert(message + syncNote);
+        showSuccess(message + syncNote);
       } else {
-        alert("❌ Error saving record. Please try again.");
+        showError("Error saving record. Please try again.");
       }
     } catch (error) {
       console.error("Error saving health record:", error);
-      alert("❌ Error saving record. Please check your storage.");
+      showError("Error saving record. Please check your storage.");
     }
   };
 
@@ -214,13 +245,13 @@ export default function AdminDashboard() {
         if (success) {
           await loadHealthRecords();
           const syncNote = isOnline() ? " and syncing..." : " (will sync when online)";
-          alert("✅ Record deleted" + syncNote);
+          showSuccess("Record deleted" + syncNote);
         } else {
-          alert("❌ Error deleting record. Please try again.");
+          showError("Error deleting record. Please try again.");
         }
       } catch (error) {
         console.error("Error deleting health record:", error);
-        alert("❌ Error deleting record.");
+        showError("Error deleting record.");
       }
     }
   };
@@ -297,10 +328,14 @@ export default function AdminDashboard() {
     setShowPhotoViewer(true);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("adminLoggedIn");
-    localStorage.removeItem("adminUser");
-    router.push("/admin/login");
+  const handleLogout = async () => {
+    try {
+      await logout();
+      showSuccess("Logged out successfully");
+      router.push("/admin/login");
+    } catch (error) {
+      showError("Error logging out");
+    }
   };
 
   const handleEdit = (tree: TreeInfo) => {
@@ -317,13 +352,13 @@ export default function AdminDashboard() {
           setTrees(trees.map((t) => (t.id === editForm.id ? editForm : t)));
           setEditingTree(null);
           setEditForm(null);
-          alert("✅ Tree information updated successfully in Firebase!");
+          showSuccess("Tree information updated successfully in Firebase!");
         } else {
-          alert("❌ Error updating tree. Please try again.");
+          showError("Error updating tree. Please try again.");
         }
       } catch (error) {
         console.error("Error:", error);
-        alert("❌ Error updating tree. Please check your Firebase configuration.");
+        showError("Error updating tree. Please check your Firebase configuration.");
       }
     }
   };
@@ -342,11 +377,11 @@ export default function AdminDashboard() {
   const handleDeleteActivity = (id: string) => {
     if (confirm("Are you sure you want to delete this activity?")) {
       setActivities(activities.filter((a) => a.id !== id));
-      alert("Activity deleted successfully!");
+      showSuccess("Activity deleted successfully!");
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -357,120 +392,60 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-gradient-to-r from-tropical-green to-tropical-lime text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-              <p className="text-gray-100 mt-1">Manage tree information and farm activities</p>
+    <div className="min-h-screen bg-gray-50 flex">
+      <AdminSidebar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        alertCount={0}
+      />
+
+      <div className="flex-1 min-h-screen">
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+          <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold text-gray-900">
+                {activeTab === 'trees' && 'Dashboard'}
+                {activeTab === 'table' && 'Tree List'}
+                {activeTab === 'health' && 'Tree Health Records'}
+                {activeTab === 'qrcodes' && 'QR Code Generator'}
+                {activeTab === 'activities' && 'Farm Activities'}
+                {activeTab === 'harvest' && 'Harvest Calendar'}
+                {activeTab === 'profits' && 'Costs & Profits'}
+                {activeTab === 'analytics' && 'Yield Analytics'}
+                {activeTab === 'inventory' && 'Inventory Management'}
+                {activeTab === 'tasks' && 'Task Scheduler'}
+                {activeTab === 'weather' && 'Weather Forecast'}
+                {activeTab === 'alerts' && 'Smart Alerts'}
+                {activeTab === 'reports' && 'Reports & Export'}
+              </h1>
             </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/"
-                className="flex items-center space-x-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors"
-              >
-                <ArrowLeft size={20} />
-                <span>Back to Website</span>
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="flex items-center space-x-2 bg-red-500/80 hover:bg-red-600 px-4 py-2 rounded-lg transition-colors"
-              >
-                <LogOut size={20} />
-                <span>Logout</span>
-              </button>
+            <div className="flex items-center gap-4">
+              <SyncStatusIndicator />
             </div>
           </div>
-          {/* Sync Status Indicator */}
-          <div className="flex justify-end">
-            <SyncStatusIndicator />
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">🚀 Quick Actions</h2>
-          <div className="flex flex-wrap gap-4">
-            <Link
-              href="/admin/bulk-import"
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-6 py-3 rounded-lg flex items-center space-x-2 transition-colors shadow-lg"
-            >
-              <Plus size={20} />
-              <span>Bulk Import Trees (500+)</span>
-            </Link>
-            <Link
-              href="/farm-transparency"
-              className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors shadow-lg"
-            >
-              View Farm Map
-            </Link>
-          </div>
         </div>
 
-        <div className="flex space-x-4 mb-8 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab("trees")}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all whitespace-nowrap ${
-              activeTab === "trees"
-                ? "bg-gradient-to-r from-tropical-green to-tropical-lime text-white shadow-lg"
-                : "bg-white text-gray-700 hover:bg-gray-50 shadow-md"
-            }`}
-          >
-            Tree Management
-          </button>
-          <button
-            onClick={() => setActiveTab("table")}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all whitespace-nowrap ${
-              activeTab === "table"
-                ? "bg-gradient-to-r from-tropical-green to-tropical-lime text-white shadow-lg"
-                : "bg-white text-gray-700 hover:bg-gray-50 shadow-md"
-            }`}
-          >
-            Data Table
-          </button>
-          <button
-            onClick={() => setActiveTab("qrcodes")}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all whitespace-nowrap ${
-              activeTab === "qrcodes"
-                ? "bg-gradient-to-r from-tropical-green to-tropical-lime text-white shadow-lg"
-                : "bg-white text-gray-700 hover:bg-gray-50 shadow-md"
-            }`}
-          >
-            QR Codes
-          </button>
-          <button
-            onClick={() => setActiveTab("health")}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all whitespace-nowrap ${
-              activeTab === "health"
-                ? "bg-gradient-to-r from-tropical-green to-tropical-lime text-white shadow-lg"
-                : "bg-white text-gray-700 hover:bg-gray-50 shadow-md"
-            }`}
-          >
-            🌳 Tree Health
-          </button>
-          <button
-            onClick={() => setActiveTab("activities")}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all whitespace-nowrap ${
-              activeTab === "activities"
-                ? "bg-gradient-to-r from-tropical-green to-tropical-lime text-white shadow-lg"
-                : "bg-white text-gray-700 hover:bg-gray-50 shadow-md"
-            }`}
-          >
-            Farm Activities
-          </button>
-        </div>
-
+        <div className="p-4 sm:p-6 lg:px-8">
         {activeTab === "trees" && (
           <div className="space-y-6">
-            {trees.map((tree) => (
-              <div key={tree.id} className="bg-white rounded-xl shadow-lg p-6">
+            {loadingTrees ? (
+              <>
+                <SkeletonTreeCard />
+                <SkeletonTreeCard />
+                <SkeletonTreeCard />
+              </>
+            ) : (
+              trees.map((tree, index) => (
+              <div
+                key={tree.id}
+                className={`bg-white rounded-xl shadow-lg p-6 ${transitions.fadeIn}`}
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
                 {editingTree === tree.id && editForm ? (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between mb-4">
@@ -638,7 +613,8 @@ export default function AdminDashboard() {
                   </div>
                 )}
               </div>
-            ))}
+            ))
+            )}
           </div>
         )}
 
@@ -772,7 +748,7 @@ export default function AdminDashboard() {
               <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end">
                 <button
                   onClick={() => {
-                    alert("Data saved successfully! In production, this would save to database.");
+                    showSuccess("Data saved successfully! In production, this would save to database.");
                   }}
                   className="bg-gradient-to-r from-tropical-green to-tropical-lime hover:from-tropical-lime hover:to-tropical-green text-white font-semibold px-6 py-2 rounded-lg transition-colors flex items-center space-x-2"
                 >
@@ -876,7 +852,7 @@ export default function AdminDashboard() {
               <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end">
                 <button
                   onClick={() => {
-                    alert("Data saved successfully! In production, this would save to database.");
+                    showSuccess("Data saved successfully! In production, this would save to database.");
                   }}
                   className="bg-gradient-to-r from-blue-600 to-orange-600 hover:from-blue-700 hover:to-orange-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors flex items-center space-x-2"
                 >
@@ -1033,7 +1009,19 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {healthRecords.length === 0 ? (
+                    {loadingHealthRecords ? (
+                      <>
+                        <tr>
+                          <td colSpan={11} className="p-6">
+                            <div className="space-y-4">
+                              <SkeletonHealthRecord />
+                              <SkeletonHealthRecord />
+                              <SkeletonHealthRecord />
+                            </div>
+                          </td>
+                        </tr>
+                      </>
+                    ) : healthRecords.length === 0 ? (
                       <tr>
                         <td colSpan={11} className="px-4 py-8 text-center text-gray-500">
                           No health records yet. Click "Add Health Record" to create your first record.
@@ -1145,6 +1133,62 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
+        )}
+
+        {activeTab === "harvest" && (
+          <HarvestCalendar trees={trees} />
+        )}
+
+        {activeTab === "dashboard-analytics" && (
+          <AnalyticsDashboard />
+        )}
+
+        {activeTab === "profits" && (
+          <ProfitDashboard trees={trees} />
+        )}
+
+        {activeTab === "analytics" && (
+          <YieldAnalyticsDashboard trees={trees} />
+        )}
+
+        {activeTab === "inventory" && (
+          <InventoryDashboard />
+        )}
+
+        {activeTab === "tasks" && (
+          <TaskSchedulerDashboard />
+        )}
+
+        {activeTab === "weather" && (
+          <WeatherDashboard />
+        )}
+
+        {activeTab === "alerts" && (
+          <AlertsDashboard trees={trees} healthRecords={healthRecords} />
+        )}
+
+        {activeTab === "reports" && (
+          <ReportsDashboard trees={trees} healthRecords={healthRecords} />
+        )}
+
+        {activeTab === "activitylog" && (
+          <ActivityLogDashboard />
+        )}
+
+        {activeTab === "backup" && (
+          <BackupManager />
+        )}
+
+        {activeTab === "users" && (
+          <UserManagement />
+        )}
+
+        {activeTab === "products" && (
+          <ProductManagement />
+        )}
+
+        {activeTab === "orders" && (
+          <OrderDashboard />
         )}
       </div>
 
@@ -1382,6 +1426,7 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

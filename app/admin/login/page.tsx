@@ -1,35 +1,58 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, User } from "lucide-react";
+import { Lock, Mail, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { showSuccess, showError } from "@/lib/toast";
 
 export default function AdminLogin() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
+  const { login, user, loading: authLoading } = useAuth();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && !authLoading) {
+      router.push("/admin");
+    }
+  }, [user, authLoading, router]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    // Simple authentication (In production, use proper auth system)
-    // Default credentials: admin / admin123
-    if (username === "admin" && password === "admin123") {
-      // Store login status
-      localStorage.setItem("adminLoggedIn", "true");
-      localStorage.setItem("adminUser", username);
+    try {
+      const result = await login(email, password);
 
-      // Redirect to admin dashboard
-      router.push("/admin");
-    } else {
-      setError("Invalid username or password");
+      if (result.success) {
+        showSuccess("Login successful!");
+        router.push("/admin");
+      } else {
+        setError(result.error || "Login failed");
+        showError(result.error || "Login failed");
+      }
+    } catch (err) {
+      setError("An unexpected error occurred");
+      showError("An unexpected error occurred");
+    } finally {
       setLoading(false);
     }
   };
+
+  // Show loading while checking auth state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-tropical-green via-green-700 to-tropical-brown flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-tropical-green via-green-700 to-tropical-brown flex items-center justify-center p-4">
@@ -54,23 +77,24 @@ export default function AdminLogin() {
           )}
 
           <form onSubmit={handleLogin} className="space-y-6">
-            {/* Username */}
+            {/* Email */}
             <div>
-              <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-2">
-                Username
+              <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+                Email Address
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="text-gray-400" size={20} />
+                  <Mail className="text-gray-400" size={20} />
                 </div>
                 <input
-                  type="text"
-                  id="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-tropical-lime focus:outline-none transition-colors"
-                  placeholder="Enter your username"
+                  placeholder="admin@example.com"
                   required
+                  autoComplete="email"
                 />
               </div>
             </div>
@@ -85,14 +109,26 @@ export default function AdminLogin() {
                   <Lock className="text-gray-400" size={20} />
                 </div>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-tropical-lime focus:outline-none transition-colors"
+                  className="w-full pl-10 pr-12 py-3 border-2 border-gray-200 rounded-lg focus:border-tropical-lime focus:outline-none transition-colors"
                   placeholder="Enter your password"
                   required
+                  autoComplete="current-password"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                >
+                  {showPassword ? (
+                    <EyeOff className="text-gray-400 hover:text-gray-600" size={20} />
+                  ) : (
+                    <Eye className="text-gray-400 hover:text-gray-600" size={20} />
+                  )}
+                </button>
               </div>
             </div>
 
@@ -108,19 +144,40 @@ export default function AdminLogin() {
             </button>
           </form>
 
-          {/* Demo Credentials Info */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800 font-semibold mb-2">Demo Credentials:</p>
-            <p className="text-sm text-blue-600">Username: <span className="font-mono font-bold">admin</span></p>
-            <p className="text-sm text-blue-600">Password: <span className="font-mono font-bold">admin123</span></p>
+          {/* First Time Setup Info */}
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
+            <p className="text-sm text-blue-800 font-semibold mb-2">🔐 First Time Setup?</p>
+            <p className="text-xs text-blue-700 mb-2">
+              You need to create an owner account first. Go to Firebase Console:
+            </p>
+            <ol className="text-xs text-blue-600 space-y-1 ml-4 list-decimal">
+              <li>Open Firebase Console</li>
+              <li>Go to Authentication → Users</li>
+              <li>Click "Add user"</li>
+              <li>Create your admin email & password</li>
+              <li>Then login here</li>
+            </ol>
+          </div>
+
+          {/* Forgot Password */}
+          <div className="mt-4 text-center">
+            <a href="/admin/forgot-password" className="text-sm text-gray-600 hover:text-tropical-green transition-colors">
+              Forgot password?
+            </a>
           </div>
 
           {/* Back to Website */}
-          <div className="mt-6 text-center">
+          <div className="mt-4 text-center">
             <a href="/" className="text-sm text-gray-600 hover:text-tropical-green transition-colors">
               ← Back to Website
             </a>
           </div>
+        </div>
+
+        {/* Security Info */}
+        <div className="mt-6 text-center text-white text-xs opacity-75">
+          <p>🔒 Secured by Firebase Authentication</p>
+          <p className="mt-1">All login attempts are encrypted and logged</p>
         </div>
       </div>
     </div>
