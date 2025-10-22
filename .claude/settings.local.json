@@ -43,7 +43,10 @@
       "Bash(powershell -Command:*)",
       "Bash(npm install recharts)",
       "Bash(del nul)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: Complete Durian Farm Management System with PWA, E-Commerce & Analytics\n\nMajor Features Added:\n- ✅ Progressive Web App (PWA) with offline support\n- ✅ E-Commerce platform with Curlec payment integration\n- ✅ Comprehensive Analytics Dashboard with business intelligence\n- ✅ Data validation with Zod schemas\n- ✅ Camera & GPS integration for field workers\n- ✅ Multi-user authentication & role management\n- ✅ Inventory management system\n- ✅ Health records tracking\n- ✅ QR code generation for trees\n- ✅ Harvest forecasting & yield analytics\n\nPWA Features:\n- Installable on iOS, Android, and Desktop\n- Offline-first architecture with service workers\n- Camera capture for field photos\n- GPS location tagging\n- Background sync when online\n- Push notification ready\n\nE-Commerce Features:\n- Product catalog with search and filters\n- Shopping cart with discount codes\n- Curlec payment gateway integration\n- Order management dashboard\n- Customer reviews and ratings\n- Inventory sync with stock management\n\nAnalytics Features:\n- Revenue vs Expenses visualization\n- Yield trends by variety\n- Variety profitability analysis\n- Inventory turnover rates\n- Disease pattern tracking\n- Harvest forecasting (90 days)\n- Real-time business metrics\n\nTechnical Improvements:\n- Comprehensive form validation\n- Type-safe with TypeScript\n- Firebase Firestore integration\n- Responsive design for all devices\n- Optimistic UI updates\n- Error boundaries and fallbacks\n- Accessibility features (WCAG 2.1)\n\n🤖 Generated with Claude Code\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
