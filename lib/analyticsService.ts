@@ -8,7 +8,7 @@ import {
   limit,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Tree, HealthRecord, CustomerOrder, Product } from '@/types/tree';
+import type { TreeInfo, TreeHealthRecord, CustomerOrder, Product } from '@/types/tree';
 
 // ============================================
 // ANALYTICS TYPES
@@ -133,9 +133,9 @@ export async function getRevenueExpenseData(days: number = 30): Promise<RevenueE
 
     ordersSnapshot.forEach((doc) => {
       const order = doc.data() as CustomerOrder;
-      const dateStr = formatDate(order.createdAt.toDate());
+      const dateStr = order.createdAt; // createdAt is already a string
       const current = dataByDate.get(dateStr) || { revenue: 0, expenses: 0 };
-      current.revenue += order.totalAmount;
+      current.revenue += order.total; // Use 'total' instead of 'totalAmount'
       dataByDate.set(dateStr, current);
     });
 
@@ -196,7 +196,7 @@ export async function getYieldTrends(months: number = 12): Promise<YieldTrendDat
       const tree = treesSnapshot.docs.find(t => t.id === activity.treeId);
       if (!tree) return;
 
-      const treeData = tree.data() as Tree;
+      const treeData = tree.data() as TreeInfo;
       const variety = treeData.variety;
       const yieldAmount = activity.yieldAmount || 0;
 
@@ -260,7 +260,7 @@ export async function getVarietyProfitability(): Promise<VarietyProfitability[]>
     }>();
 
     treesSnapshot.forEach((doc) => {
-      const tree = doc.data() as Tree;
+      const tree = doc.data() as TreeInfo;
       const variety = tree.variety;
 
       if (!varietyData.has(variety)) {
@@ -269,7 +269,7 @@ export async function getVarietyProfitability(): Promise<VarietyProfitability[]>
 
       const data = varietyData.get(variety)!;
       data.trees++;
-      data.yield += tree.estimatedYield || 0;
+      data.yield += parseFloat(tree.yield) || 0; // Parse yield string to number
     });
 
     // Calculate revenue from orders
@@ -279,7 +279,7 @@ export async function getVarietyProfitability(): Promise<VarietyProfitability[]>
         const product = productsSnapshot.docs.find(p => p.id === item.productId);
         if (product) {
           const productData = product.data() as Product;
-          const variety = productData.variant || 'Unknown';
+          const variety = productData.variety || 'Unknown';
 
           if (varietyData.has(variety)) {
             const data = varietyData.get(variety)!;
@@ -416,27 +416,28 @@ export async function getDiseasePatterns(months: number = 12): Promise<DiseasePa
     }>>();
 
     recordsSnapshot.forEach((doc) => {
-      const record = doc.data() as HealthRecord;
-      const monthKey = getMonthName(record.date.toDate());
+      const record = doc.data() as TreeHealthRecord;
+      const monthKey = record.inspectionDate; // Use inspectionDate string directly
 
-      record.symptoms.forEach((symptom) => {
-        if (!diseaseByMonth.has(monthKey)) {
-          diseaseByMonth.set(monthKey, new Map());
-        }
+      // Track disease types from TreeHealthRecord
+      const disease = record.diseaseType || 'Unknown';
 
-        const monthData = diseaseByMonth.get(monthKey)!;
-        if (!monthData.has(symptom)) {
-          monthData.set(symptom, { cases: 0, trees: new Set(), recovered: 0 });
-        }
+      if (!diseaseByMonth.has(monthKey)) {
+        diseaseByMonth.set(monthKey, new Map());
+      }
 
-        const diseaseData = monthData.get(symptom)!;
-        diseaseData.cases++;
-        diseaseData.trees.add(record.treeId);
+      const monthData = diseaseByMonth.get(monthKey)!;
+      if (!monthData.has(disease)) {
+        monthData.set(disease, { cases: 0, trees: new Set(), recovered: 0 });
+      }
 
-        if (record.healthStatus === 'recovering') {
-          diseaseData.recovered++;
-        }
-      });
+      const diseaseData = monthData.get(disease)!;
+      diseaseData.cases++;
+      diseaseData.trees.add(record.treeId);
+
+      if (record.healthStatus === 'Sihat') { // 'Sihat' means recovered/healthy in Malay
+        diseaseData.recovered++;
+      }
     });
 
     // Convert to array
@@ -487,14 +488,14 @@ export async function getHarvestForecast(days: number = 90): Promise<HarvestFore
     }>();
 
     treesSnapshot.forEach((doc) => {
-      const tree = doc.data() as Tree;
+      const tree = doc.data() as TreeInfo;
 
-      // Only forecast for healthy trees
-      if (tree.healthStatus !== 'healthy') return;
+      // Only forecast for healthy trees (TreeInfo uses 'health' property)
+      if (tree.health !== 'Excellent' && tree.health !== 'Good') return;
 
-      // Estimate next harvest based on last harvest
-      const daysSinceHarvest = tree.lastHarvestDate
-        ? (Date.now() - tree.lastHarvestDate.toDate().getTime()) / (1000 * 60 * 60 * 24)
+      // Estimate next harvest based on last harvest (lastHarvest is a string)
+      const daysSinceHarvest = tree.lastHarvest
+        ? (Date.now() - new Date(tree.lastHarvest).getTime()) / (1000 * 60 * 60 * 24)
         : 365;
 
       // Most durian trees fruit 2-3 times per year
@@ -517,7 +518,7 @@ export async function getHarvestForecast(days: number = 90): Promise<HarvestFore
         }
 
         const forecast = forecasts.get(key)!;
-        forecast.estimatedYield += tree.estimatedYield || 50;
+        forecast.estimatedYield += parseFloat(tree.yield) || 50; // Parse yield string
         forecast.treesReady++;
 
         // Adjust confidence based on tree health history
@@ -583,10 +584,10 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
     let totalYield = 0;
 
     treesSnapshot.forEach((doc) => {
-      const tree = doc.data() as Tree;
-      if (tree.healthStatus === 'healthy') healthyTrees++;
-      if (tree.healthStatus === 'sick') sickTrees++;
-      totalYield += tree.estimatedYield || 0;
+      const tree = doc.data() as TreeInfo;
+      if (tree.health === 'Excellent' || tree.health === 'Good') healthyTrees++;
+      if (tree.health === 'Needs Attention') sickTrees++;
+      totalYield += parseFloat(tree.yield) || 0;
     });
 
     const topVariety = varietyProfit.length > 0

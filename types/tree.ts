@@ -34,6 +34,9 @@ export interface TreeInfo {
   nextExpectedHarvest: string;
   health: "Excellent" | "Good" | "Fair" | "Needs Attention";
   yield: string;
+  avgYield?: string; // Average yield for analytics
+  quality?: string; // Quality grade (e.g., 'Premium', 'Standard')
+  plantedYear?: string; // Year when tree was planted
   notes: string;
   updatedAt: string;
   // Monitoring dates
@@ -81,6 +84,7 @@ export interface TreeHealthRecord {
   notes?: string; // Catatan Tambahan
   photos?: string[]; // Base64 encoded photos
   inspectedBy: string;
+  createdAt?: string; // Record creation timestamp
   updatedAt: string;
 }
 

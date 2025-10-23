@@ -100,18 +100,21 @@ export function generateTree(index: number): TreeInfo {
     updatedAt: new Date().toISOString().split('T')[0],
     careHistory: [
       {
+        id: `${treeId}-planting`,
         date: plantedDate,
-        eventType: "planting",
+        eventType: "other",
         description: `${variety} tree planted in ${location}`,
         performedBy: "Farm Manager",
       },
       {
+        id: `${treeId}-fertilization`,
         date: lastFertilized,
         eventType: "fertilization",
         description: `Applied ${fertilizerTypes[Math.floor(Math.random() * fertilizerTypes.length)]}`,
         performedBy: "Farm Team",
       },
       {
+        id: `${treeId}-harvest`,
         date: lastHarvest,
         eventType: "harvest",
         description: `Harvested approximately ${yieldAmount} kg of premium durians`,

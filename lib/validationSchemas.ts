@@ -31,7 +31,7 @@ export const TreeSchema = z.object({
     .max(100, "Height must be less than 100 meters"),
 
   healthStatus: z.enum(['healthy', 'sick', 'recovering', 'dead'], {
-    errorMap: () => ({ message: "Invalid health status" })
+    message: "Invalid health status"
   }),
 
   lastHarvestDate: z.string().optional()
@@ -96,7 +96,7 @@ export const InventoryItemSchema = z.object({
     .regex(/^[a-zA-Z0-9\s-().,]+$/, "Invalid characters in item name"),
 
   category: z.enum(['fertilizer', 'pesticide', 'tool', 'equipment', 'supply', 'other'], {
-    errorMap: () => ({ message: "Invalid category" })
+    message: "Invalid category"
   }),
 
   currentStock: z.number()
@@ -146,7 +146,7 @@ export const StockMovementSchema = z.object({
     .min(1, "Item ID is required"),
 
   type: z.enum(['in', 'out', 'adjustment'], {
-    errorMap: () => ({ message: "Invalid movement type" })
+    message: "Invalid movement type"
   }),
 
   quantity: z.number()
@@ -189,7 +189,7 @@ export const ProductSchema = z.object({
     .max(2000, "Description too long"),
 
   category: z.enum(['fresh', 'frozen', 'processed', 'merchandise'], {
-    errorMap: () => ({ message: "Invalid category" })
+    message: "Invalid category"
   }),
 
   price: z.number()
@@ -248,7 +248,7 @@ export const OrderSchema = z.object({
       'Sarawak', 'Selangor', 'Terengganu', 'W.P. Kuala Lumpur',
       'W.P. Labuan', 'W.P. Putrajaya'
     ], {
-      errorMap: () => ({ message: "Invalid Malaysian state" })
+      message: "Invalid Malaysian state"
     }),
 
     postalCode: z.string()
@@ -310,7 +310,7 @@ export const UserProfileSchema = z.object({
     .optional(),
 
   role: z.enum(['admin', 'manager', 'worker', 'viewer'], {
-    errorMap: () => ({ message: "Invalid role" })
+    message: "Invalid role"
   }),
 
   avatar: z.string()
@@ -511,7 +511,7 @@ export function validateData<T>(schema: z.ZodSchema<T>, data: unknown): Validati
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errors: Record<string, string> = {};
-      error.errors.forEach((err) => {
+      error.issues.forEach((err) => {
         const path = err.path.join('.');
         errors[path] = err.message;
       });

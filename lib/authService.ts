@@ -28,6 +28,9 @@ import {
 import { User, UserRole, UserPermissions } from '@/types/tree';
 import { logActivity } from './activityLog';
 
+// Re-export UserRole for external use
+export type { UserRole };
+
 // User profile stored in Firestore (extends base User type)
 export interface UserProfile extends Omit<User, 'id'> {
   uid: string;
@@ -57,8 +60,9 @@ export async function registerUser(
     const userProfile: UserProfile = {
       uid: user.uid,
       email: user.email!,
-      displayName,
+      name: displayName, // User type uses 'name', not 'displayName'
       role,
+      status: 'active' as const, // Add required status field
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isActive: true,

@@ -125,7 +125,7 @@ export function getVarietyPerformance(
   trees: TreeInfo[],
   harvests: HarvestRecord[]
 ): VarietyPerformance[] {
-  const varieties = [...new Set(trees.map((t) => t.variety))];
+  const varieties = Array.from(new Set(trees.map((t) => t.variety)));
 
   return varieties
     .map((variety) => {
@@ -247,8 +247,10 @@ export function getTopPerformers(
   harvests: HarvestRecord[],
   limit: number = 20
 ): TopPerformer[] {
-  const performers = trees
-    .map((tree) => {
+  type PerformerBase = Omit<TopPerformer, 'rank'>;
+
+  const basePerformers: PerformerBase[] = trees
+    .map((tree): PerformerBase | null => {
       const history = getTreeYieldHistory(tree, harvests);
 
       if (history.harvests.length < 2) return null; // Need at least 2 harvests
@@ -297,7 +299,9 @@ export function getTopPerformers(
         reason,
       };
     })
-    .filter((p): p is TopPerformer => p !== null)
+    .filter((p): p is PerformerBase => p !== null);
+
+  const performers: TopPerformer[] = basePerformers
     .sort((a, b) => {
       // Sort by: breeding recommendation, then yield, then consistency
       if (a.recommendForBreeding !== b.recommendForBreeding) {

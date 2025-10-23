@@ -58,7 +58,7 @@ export default function ValidatedTextarea({
           disabled:bg-gray-100 disabled:cursor-not-allowed
           ${className}
         `}
-        aria-invalid={hasError}
+        aria-invalid={hasError ? 'true' : 'false'}
         aria-describedby={hasError ? `${name}-error` : helperText ? `${name}-helper` : undefined}
         {...props}
       />
